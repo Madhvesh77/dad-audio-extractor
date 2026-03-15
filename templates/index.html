@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YT Audio Ripper</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --accent: #c8f53d;
+      --accent2: #5cf5b0;
+      --text: #f0f0f0;
+      --muted: #6b6b6b;
+      --danger: #ff5c5c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px;
+    }
+    h1 {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    h1 span { color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 48px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82rem;
+      padding: 14px 16px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    button {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 22px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary { background: var(--accent); color: #0d0d0d; font-weight: 700; }
+    .btn-secondary { background: #1e1e1e; border: 1px solid var(--border); color: var(--text); }
+    .btn-dl { background: var(--accent2); color: #0d0d0d; font-weight: 700; font-size: 0.78rem; padding: 10px 16px; border-radius: 8px; }
+    .btn-dl-all { background: var(--accent); color: #0d0d0d; font-weight: 700; margin-top: 16px; width: 100%; padding: 14px; }
+
+    #status {
+      margin-top: 18px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      min-height: 18px;
+    }
+    #status.error { color: var(--danger); }
+    #status.ok { color: var(--accent2); }
+
+    #result { margin-top: 28px; }
+
+    /* Single video */
+    .video-card {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .video-card img { width: 100px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+    .video-info { flex: 1; min-width: 0; }
+    .video-title { font-weight: 500; font-size: 0.95rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .video-meta { color: var(--muted); font-size: 0.78rem; font-family: 'Space Mono', monospace; }
+
+    /* Playlist */
+    .playlist-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .playlist-title { font-family: 'Space Mono', monospace; font-size: 0.9rem; }
+    .playlist-count { color: var(--muted); font-size: 0.78rem; font-family: 'Space Mono', monospace; }
+
+    .track-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px; }
+    .track-list::-webkit-scrollbar { width: 4px; }
+    .track-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .track-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+    }
+    .track-item.ready { border-color: var(--accent2); }
+    .track-num { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.75rem; width: 24px; flex-shrink: 0; text-align: center; }
+    .track-title { flex: 1; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .track-status { font-family: 'Space Mono', monospace; font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+    .track-status.done { color: var(--accent2); }
+    .track-status.fail { color: var(--danger); }
+
+    .progress-bar-wrap { margin: 16px 0 4px; background: var(--border); border-radius: 100px; height: 4px; }
+    .progress-bar { height: 4px; background: var(--accent); border-radius: 100px; transition: width 0.3s; }
+    .progress-label { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<h1>YT <span>Audio</span> Ripper</h1>
+<p class="subtitle">paste a youtube video or playlist link · get mp3s</p>
+
+<div class="card">
+  <div class="input-row">
+    <input type="text" id="urlInput" placeholder="https://youtube.com/watch?v=... or playlist?list=..." />
+    <button class="btn-primary" onclick="fetchInfo()">Fetch</button>
+  </div>
+  <div id="status"></div>
+  <div id="result"></div>
+</div>
+
+<script>
+  const BASE = '';
+  let currentJobId = null;
+  let pollTimer = null;
+
+  function setStatus(msg, type='') {
+    const el = document.getElementById('status');
+    el.innerHTML = msg;
+    el.className = type;
+  }
+
+  function fmtDuration(s) {
+    if (!s) return '';
+    const m = Math.floor(s / 60), sec = s % 60;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+  }
+
+  async function fetchInfo() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) return setStatus('Please enter a YouTube URL.', 'error');
+    setStatus('<span class="spinner"></span> Fetching info...');
+    document.getElementById('result').innerHTML = '';
+    if (pollTimer) clearInterval(pollTimer);
+
+    try {
+      const res = await fetch(`${BASE}/info`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url})
+      });
+      const data = await res.json();
+      if (data.error) return setStatus('Error: ' + data.error, 'error');
+
+      setStatus('');
+      if (data.type === 'video') renderVideo(data, url);
+      else renderPlaylist(data);
+    } catch(e) {
+      setStatus('Network error: ' + e.message, 'error');
+    }
+  }
+
+  function renderVideo(info, url) {
+    const result = document.getElementById('result');
+    result.innerHTML = `
+      <div class="video-card">
+        ${info.thumbnail ? `<img src="${info.thumbnail}" alt="thumb"/>` : ''}
+        <div class="video-info">
+          <div class="video-title" title="${info.title}">${info.title}</div>
+          <div class="video-meta">
+            ${info.uploader ? info.uploader + ' · ' : ''}${fmtDuration(info.duration)}
+          </div>
+        </div>
+        <button class="btn-dl" id="dlBtn" onclick="downloadSingle('${encodeURIComponent(url)}', this)">
+          ▼ MP3
+        </button>
+      </div>
+    `;
+  }
+
+  async function downloadSingle(encodedUrl, btn) {
+    const url = decodeURIComponent(encodedUrl);
+    btn.disabled = true;
+    btn.textContent = '...';
+    setStatus('<span class="spinner"></span> Downloading & converting to MP3...');
+    try {
+      const res = await fetch(`${BASE}/download/single`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url})
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setStatus('Error: ' + err.error, 'error');
+        btn.disabled = false; btn.textContent = '▼ MP3';
+        return;
+      }
+      const blob = await res.blob();
+      const disp = res.headers.get('Content-Disposition') || '';
+      const nameMatch = disp.match(/filename="?([^"]+)"?/);
+      const filename = nameMatch ? nameMatch[1] : 'audio.mp3';
+      triggerDownload(blob, filename);
+      setStatus('✓ Downloaded!', 'ok');
+      btn.disabled = false; btn.textContent = '▼ MP3';
+    } catch(e) {
+      setStatus('Error: ' + e.message, 'error');
+      btn.disabled = false; btn.textContent = '▼ MP3';
+    }
+  }
+
+  function renderPlaylist(data) {
+    const result = document.getElementById('result');
+    const entriesJson = encodeURIComponent(JSON.stringify(data.entries));
+    let tracksHTML = data.entries.map((e, i) => `
+      <div class="track-item" id="track-${e.id || i}">
+        <span class="track-num">${i+1}</span>
+        <span class="track-title" title="${e.title}">${e.title}</span>
+        <span class="track-status" id="ts-${e.id || i}">—</span>
+      </div>
+    `).join('');
+
+    result.innerHTML = `
+      <div class="playlist-header">
+        <span class="playlist-title">${data.title}</span>
+        <span class="playlist-count">${data.count} tracks</span>
+      </div>
+      <div class="track-list">${tracksHTML}</div>
+      <div class="progress-bar-wrap" id="progressWrap" style="display:none">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="progressLabel"></div>
+      <button class="btn-dl-all" id="dlAllBtn" onclick="startPlaylistDownload('${entriesJson}')">
+        ▼ Download All as MP3
+      </button>
+    `;
+  }
+
+  async function startPlaylistDownload(encodedEntries) {
+    const entries = JSON.parse(decodeURIComponent(encodedEntries));
+    const btn = document.getElementById('dlAllBtn');
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+    document.getElementById('progressWrap').style.display = 'block';
+    setStatus('<span class="spinner"></span> Starting playlist download (rate-limited for safety)...');
+
+    try {
+      const res = await fetch(`${BASE}/download/playlist/start`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({entries})
+      });
+      const data = await res.json();
+      if (data.error) { setStatus(data.error, 'error'); btn.disabled=false; return; }
+      currentJobId = data.job_id;
+      pollPlaylistStatus(currentJobId, entries);
+    } catch(e) {
+      setStatus('Error: ' + e.message, 'error');
+      btn.disabled = false;
+    }
+  }
+
+  function pollPlaylistStatus(jobId, entries) {
+    const idMap = {};
+    entries.forEach((e, i) => { idMap[e.id || i] = e; });
+
+    pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`${BASE}/download/playlist/status/${jobId}`);
+        const status = await res.json();
+
+        const pct = Math.round((status.completed + status.failed) / status.total * 100);
+        document.getElementById('progressBar').style.width = pct + '%';
+        document.getElementById('progressLabel').textContent =
+          `${status.completed} done · ${status.failed} failed · ${status.total - status.completed - status.failed} remaining`;
+
+        // Update track statuses & add download buttons
+        status.files.forEach(f => {
+          const trackEl = document.getElementById(`track-${f.file_id}`) ||
+            [...document.querySelectorAll('.track-item')].find(el =>
+              el.querySelector('.track-title')?.title === f.title);
+
+          // find by title match as fallback
+          const allTracks = document.querySelectorAll('.track-item');
+          allTracks.forEach(el => {
+            if (el.querySelector('.track-title')?.textContent?.trim() === f.title) {
+              el.classList.add('ready');
+              const ts = el.querySelector('.track-status');
+              if (ts && !ts.classList.contains('done')) {
+                ts.className = 'track-status done';
+                ts.innerHTML = `<button class="btn-dl" style="padding:6px 12px" onclick="downloadPlaylistFile('${jobId}','${f.file_id}',this)">▼</button>`;
+              }
+            }
+          });
+        });
+
+        if (status.done) {
+          clearInterval(pollTimer);
+          setStatus(`✓ Playlist complete — ${status.completed}/${status.total} downloaded`, 'ok');
+          const btn = document.getElementById('dlAllBtn');
+          btn.disabled = false;
+          btn.textContent = '✓ All Done';
+        }
+      } catch(e) {
+        clearInterval(pollTimer);
+        setStatus('Polling error: ' + e.message, 'error');
+      }
+    }, 3000);
+  }
+
+  async function downloadPlaylistFile(jobId, fileId, btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+      const res = await fetch(`${BASE}/download/playlist/file/${jobId}/${fileId}`);
+      if (!res.ok) { btn.disabled=false; btn.textContent='▼'; return; }
+      const blob = await res.blob();
+      const disp = res.headers.get('Content-Disposition') || '';
+      const nameMatch = disp.match(/filename="?([^"]+)"?/);
+      const filename = nameMatch ? nameMatch[1] : 'audio.mp3';
+      triggerDownload(blob, filename);
+      btn.textContent = '✓';
+    } catch(e) {
+      btn.disabled = false; btn.textContent = '▼';
+    }
+  }
+
+  function triggerDownload(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchInfo();
+  });
+</script>
+</body>
+</html>

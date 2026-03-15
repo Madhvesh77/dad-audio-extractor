@@ -1,0 +1,4 @@
+([('YT Audio Downloader',
+   '/Users/madhveshs/Documents/Non-work/dad-audio-extractor/dist/YT Audio '
+   'Downloader',
+   'EXECUTABLE')],)
