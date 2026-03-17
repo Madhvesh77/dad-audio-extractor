@@ -163,7 +163,6 @@ class YTAudioApp:
                     "Chrome/123.0.0.0 Safari/537.36"
                 ),
             },
-            "impersonate": "chrome",
             "sleep_interval": 3,
             "max_sleep_interval": 8,
             "retries": 5,
